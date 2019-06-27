@@ -169,10 +169,10 @@ namespace ExcelParser
 
             Excel.Application excelApp = new Excel.Application
             {
-                Visible = true
+                Visible = false
             };
 
-            Excel.Workbook workbook = excelApp.Workbooks.Open(f, 0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, 
+            Excel.Workbook workbook = excelApp.Workbooks.Open(f, 0, true, 5, "", "", false, Excel.XlPlatform.xlWindows, 
                 "", true, false, 0, true, false, false);
 
             Excel.Sheets excelSheet = workbook.Worksheets;
@@ -184,7 +184,9 @@ namespace ExcelParser
                 currentSheet = currentSheet.Substring(0, getEnd);
             }
 
-            Excel.Worksheet excelWorksheet = (Excel.Worksheet)excelSheet.Item[currentSheet];
+            Console.WriteLine("Sheet name: " + currentSheet);
+
+            Excel.Worksheet excelWorksheet = (Excel.Worksheet)excelSheet[1];
 
             int totalRows = excelWorksheet.Rows.Count;
 
@@ -192,8 +194,11 @@ namespace ExcelParser
 
             for (int i = 1; i <= totalRows; i++)
             {
+                Console.WriteLine("Row number: " + i + " of " + totalRows);
                 var cell = (Excel.Range)excelWorksheet.Cells[i, column];
                 var GetString = (string)cell.Value;
+
+                Console.WriteLine("Word: \n" + GetString);
 
                 text += GetString + "\n";
             }
@@ -211,23 +216,23 @@ namespace ExcelParser
         public static void ProcessString(string s)
         {
             FileStream fileStream = new FileStream("Verbatim.txt", FileMode.Append);
-            
-            using (StreamWriter writer = new StreamWriter(fileStream))
+            StreamWriter writer = new StreamWriter(fileStream);
+
+            List<string> AllArabicWords = GetArabicWords(s);
+
+            Console.WriteLine("Word: " + AllArabicWords.Count);
+
+            int count = 0;
+
+            foreach (string word in AllArabicWords)
             {
-
-                List<string> AllArabicWords = GetArabicWords(s);
-
-                int count = 0;
-
-                foreach (string word in AllArabicWords)
-                {
-                    writer.WriteLine(word);
-                    count++;
-                }
-
-                Console.WriteLine("Number of words: " + count);
-                writer.Close();
+                writer.WriteLine(word);
+                count++;
             }
+
+            Console.WriteLine("Number of words: " + count);
+            writer.Close();
+            
         }
 
         static void Main(string[] args)
@@ -239,6 +244,8 @@ namespace ExcelParser
             ProcessInputFiles(dir);
 
             Console.WriteLine("Completed");
+
+            Console.ReadKey();
         }
     }
 }
