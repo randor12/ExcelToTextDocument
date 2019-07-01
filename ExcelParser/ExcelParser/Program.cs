@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
 using Excel = Microsoft.Office.Interop.Excel;
+using System.Data.OleDb;
 
 namespace ExcelParser
 {
@@ -23,7 +24,7 @@ namespace ExcelParser
     {
         private static int numFiles;
         private static int passes;
-
+        
         /*
          * Check for numbers
          */
@@ -83,6 +84,7 @@ namespace ExcelParser
 
             return true;
         }
+        
 
         /**
          * The purpose of this function is to extract only the words that are arabic
@@ -150,6 +152,7 @@ namespace ExcelParser
                     Console.WriteLine("File: " + passes + " of " + numFiles);
                     Console.WriteLine("File Name: " + f);
                     ParseFile(f);
+                    //ParseExcel(f); // If using OLEDB
                 }
 
 
@@ -225,41 +228,62 @@ namespace ExcelParser
             }
             
 
-            /*
-             * Tested individual rows to determine where the data was
-            Console.WriteLine("Row number: " + 1 + " of " + totalColumns);
-            var cell = xlRange.Cells[2, 1];
-            string GetString = (string)cell.Value2;
+            text = Regex.Replace(text, "<[^>]*>", string.Empty);
 
-            int index = GetString.IndexOf("18_40");
-
-            Console.WriteLine("Index number is " + index);
-
-            if (index > 0)
-            {
-                GetString = GetString.Substring(index);
-            }
-            else
-            {
-                GetString = "";
-            }
+            text = Regex.Replace(text, @"^\s*$\n", " ", RegexOptions.Multiline);
             
-            Console.WriteLine("Word: \n" + GetString);
+            
+            ProcessStringByWord(text);
+            
+        }
 
-            text += GetString + "\n";
-            */
+        /*
+         * attempt two at parsing excel (now using OLEDB instead of Microsoft.Excel)
+         */
+        public static void ParseExcel(string f)
+        {
+            string connectionString = "";
+            string strFileType = Path.GetExtension(f).ToLower();
+            string path = Path.GetFileName(f);
+
+            string text = "";
+
+            if (strFileType == ".csv")
+            {
+                connectionString = "Provider = Microsoft.Jet.OLEDB.4.0; Data Source = " + path + "; Extended Properties = \"text;HDR=Yes;FMT=Delimited\"";
+            }
+
+            string query = "SELECT [xxataf] FROM [" + path + "]";
+            
+            using (OleDbConnection connection = new OleDbConnection(connectionString))
+            {
+                OleDbCommand command = new OleDbCommand(query, connection);
+
+                connection.Open();
+
+                using (OleDbDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var word = reader[0].ToString();
+
+                        text += word + "\n";
+                        Console.WriteLine("The words are: \n" + word);
+                    }
+                }
+            }
 
             text = Regex.Replace(text, "<[^>]*>", string.Empty);
 
             text = Regex.Replace(text, @"^\s*$\n", " ", RegexOptions.Multiline);
 
-            ProcessString(text);
+            ProcessStringByWord(text);
         }
 
         /**
          * Process the data retrieved from the excel sheet
          */
-        public static void ProcessString(string s)
+        public static void ProcessStringByWord(string s)
         {
             FileStream fileStream = new FileStream("Verbatim.txt", FileMode.Append);
             StreamWriter writer = new StreamWriter(fileStream);
