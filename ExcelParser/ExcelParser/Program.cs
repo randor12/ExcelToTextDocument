@@ -188,20 +188,66 @@ namespace ExcelParser
 
             Excel.Worksheet excelWorksheet = (Excel.Worksheet)excelSheet[1];
 
-            int totalRows = excelWorksheet.Rows.Count;
+            Excel.Range xlRange = excelWorksheet.UsedRange;
+            
+            int totalRows = xlRange.Rows.Count;
 
-            int column = 65;
+            int totalColumns = xlRange.Columns.Count;
 
+            
             for (int i = 1; i <= totalRows; i++)
             {
                 Console.WriteLine("Row number: " + i + " of " + totalRows);
-                var cell = (Excel.Range)excelWorksheet.Cells[i, column];
+                var cell = (Excel.Range)excelWorksheet.Cells[i, 1];
                 var GetString = (string)cell.Value;
+                
+                if (GetString == null)
+                {
+                    GetString = "";
+                }
+
+                int index = GetString.IndexOf("_");
+
+                Console.WriteLine("Index number is " + index);
+
+                if (index > 0)
+                {
+                    GetString = GetString.Substring(index);
+                }
+                else
+                {
+                    GetString = "";
+                }
 
                 Console.WriteLine("Word: \n" + GetString);
 
                 text += GetString + "\n";
             }
+            
+
+            /*
+             * Tested individual rows to determine where the data was
+            Console.WriteLine("Row number: " + 1 + " of " + totalColumns);
+            var cell = xlRange.Cells[2, 1];
+            string GetString = (string)cell.Value2;
+
+            int index = GetString.IndexOf("18_40");
+
+            Console.WriteLine("Index number is " + index);
+
+            if (index > 0)
+            {
+                GetString = GetString.Substring(index);
+            }
+            else
+            {
+                GetString = "";
+            }
+            
+            Console.WriteLine("Word: \n" + GetString);
+
+            text += GetString + "\n";
+            */
 
             text = Regex.Replace(text, "<[^>]*>", string.Empty);
 
