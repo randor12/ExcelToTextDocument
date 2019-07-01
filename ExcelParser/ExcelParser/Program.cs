@@ -17,6 +17,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Data.OleDb;
+using CsvHelper;
 
 namespace ExcelParser
 {
@@ -24,7 +25,31 @@ namespace ExcelParser
     {
         private static int numFiles;
         private static int passes;
-        
+
+        /*
+         * Check if object is numeric 
+         */
+        private static bool IsNumericType(object o)
+        {
+            switch (Type.GetTypeCode(o.GetType()))
+            {
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.Decimal:
+                case TypeCode.Double:
+                case TypeCode.Single:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /*
          * Check for numbers
          */
@@ -136,7 +161,7 @@ namespace ExcelParser
             try
             {
                 passes = 0;
-                numFiles = Directory.GetFiles(sDir, "*.csv", SearchOption.AllDirectories).Length;
+                numFiles = Directory.GetFiles(sDir, "*.xlsx", SearchOption.AllDirectories).Length;
 
                 /***************************************************************************************************
                  * SELECT BELOW FOR ALL FILES WITHIN THE DIRECTORY (INCLUDING SUB FILES)
@@ -146,11 +171,12 @@ namespace ExcelParser
                  *numFiles = Directory.GetFiles(sDir, "*", SearchOption.AllDirectories).Length;
                  ****************************************************************************************************/
 
-                foreach (string f in Directory.GetFiles(sDir, "*.csv", SearchOption.AllDirectories))
+                foreach (string f in Directory.GetFiles(sDir, "*.xlsx", SearchOption.AllDirectories))
                 {
                     passes++;
                     Console.WriteLine("File: " + passes + " of " + numFiles);
                     Console.WriteLine("File Name: " + f);
+                    //ParseCSV(f);
                     ParseFile(f);
                     //ParseExcel(f); // If using OLEDB
                 }
@@ -163,24 +189,65 @@ namespace ExcelParser
             }
         }
         
+
+        /*
+         * Parses a CSV file
+         */
+        public static void ParseCSV(string f)
+        {
+            string text = "";
+            using (var reader = new StreamReader(f))
+            {
+                using (var csvReader = new CsvReader(reader))
+                {
+                    csvReader.Configuration.BadDataFound = null;
+
+                    while (csvReader.Read())
+                    {
+                        
+                        try
+                        { 
+                            var GetWords = csvReader.GetField(0);
+
+                            if (GetWords != null)
+                            {
+                                text += GetWords.ToString() + "\n";
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.ToString());
+                        }
+                        
+                        
+                    }
+
+                    Console.WriteLine("The words are: \n" + text);
+                }
+            }
+        }
+
+        
         /*
          * Process the data in the file
          */
         public static void ParseFile(string f)
         {
-            string text = "";
+
+            FileStream fileStream = new FileStream("Verbatim.txt", FileMode.Append);
+            StreamWriter writer = new StreamWriter(fileStream);
 
             Excel.Application excelApp = new Excel.Application
             {
                 Visible = false
             };
-
+            
             Excel.Workbook workbook = excelApp.Workbooks.Open(f, 0, true, 5, "", "", false, Excel.XlPlatform.xlWindows, 
                 "", true, false, 0, true, false, false);
 
             Excel.Sheets excelSheet = workbook.Worksheets;
             string currentSheet = Path.GetFileName(f);
-            int getEnd = currentSheet.IndexOf(".csv");
+            int getEnd = currentSheet.IndexOf(".xlsx");
             
             if (getEnd > 0)
             {
@@ -196,44 +263,43 @@ namespace ExcelParser
             int totalRows = xlRange.Rows.Count;
 
             int totalColumns = xlRange.Columns.Count;
-
             
+
             for (int i = 1; i <= totalRows; i++)
             {
+                string text = "";
                 Console.WriteLine("Row number: " + i + " of " + totalRows);
-                var cell = (Excel.Range)excelWorksheet.Cells[i, 1];
-                var GetString = (string)cell.Value;
+
+                // Last 26
+                for (int j = totalColumns - 10; j <= totalColumns - 10; j++)
+                {
+                    var cell = (Excel.Range)excelWorksheet.Cells[i, j];
+                    string GetString;
+
+                    if (cell.Value == null || IsNumericType(cell.Value))
+                    {
+                        GetString = "";
+                    }
+                    else
+                    {
+                        GetString = (string)cell.Value;
+
+                        if (GetString.Length > 0 && !GetString.Equals("\n"))
+                        {
+                            text += GetString + "\n";
+                        }
+                    }
+
+                    
+                }
+
+                writer.WriteLine(text);
                 
-                if (GetString == null)
-                {
-                    GetString = "";
-                }
-
-                int index = GetString.IndexOf("_");
-
-                Console.WriteLine("Index number is " + index);
-
-                if (index > 0)
-                {
-                    GetString = GetString.Substring(index);
-                }
-                else
-                {
-                    GetString = "";
-                }
-
-                Console.WriteLine("Word: \n" + GetString);
-
-                text += GetString + "\n";
+                Console.WriteLine("Lines: \n" + text);
+                
             }
-            
 
-            text = Regex.Replace(text, "<[^>]*>", string.Empty);
-
-            text = Regex.Replace(text, @"^\s*$\n", " ", RegexOptions.Multiline);
-            
-            
-            ProcessStringByWord(text);
+            writer.Close();
             
         }
 
@@ -248,7 +314,7 @@ namespace ExcelParser
 
             string text = "";
 
-            if (strFileType == ".csv")
+            if (strFileType == ".xlsx")
             {
                 connectionString = "Provider = Microsoft.Jet.OLEDB.4.0; Data Source = " + path + "; Extended Properties = \"text;HDR=Yes;FMT=Delimited\"";
             }
@@ -307,7 +373,7 @@ namespace ExcelParser
 
         static void Main(string[] args)
         {
-            string dir = "C:\\Users\\rnicholas\\Documents\\ArabicVerbatims";
+            string dir = "C:\\Users\\rnicholas\\Documents\\TestVerbatim";
 
             Console.OutputEncoding = Encoding.Unicode;
 
