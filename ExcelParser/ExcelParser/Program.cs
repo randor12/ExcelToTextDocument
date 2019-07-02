@@ -141,6 +141,27 @@ namespace ExcelParser
             return ArabicWords;
         }
 
+        /**
+         * The purpose of this function is to extract only the words that are arabic
+         */
+        public static List<string> GetWords(string input)
+        {
+            string[] delimiters = new string[] { " ", "_", ".", "!", "\"", ":", ";", "#", "(", ")", ",", "'", "{", "}", "-", "%",
+            "؟", "،", "”", "“", "‘", "؛", "`", "?", ",", "+", "=", "*", "\\", "\n", "\t", "\r"};
+
+            string[] words = input.Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
+
+            List<string> AllWords = new List<string>();
+
+            foreach (var word in words)
+            {
+                AllWords.Add(word);
+                
+            }
+
+            return AllWords;
+        }
+
         /*
          * Reverse text
          */
@@ -271,7 +292,7 @@ namespace ExcelParser
                 Console.WriteLine("Row number: " + i + " of " + totalRows);
 
                 // Last 26
-                for (int j = totalColumns - 10; j <= totalColumns - 10; j++)
+                for (int j = totalColumns - 26; j <= totalColumns; j++)
                 {
                     var cell = (Excel.Range)excelWorksheet.Cells[i, j];
                     string GetString;
@@ -284,8 +305,25 @@ namespace ExcelParser
                     {
                         GetString = (string)cell.Value;
 
-                        if (GetString.Length > 0 && !GetString.Equals("\n"))
+                        List<string> AllWords = GetWords(GetString);
+
+                        Console.WriteLine(AllWords.Count);
+
+                        bool phraseGood = false;
+
+                        foreach (var word in AllWords)
                         {
+                            if (HasArabicGlyphs(word))
+                            {
+                                phraseGood = true;
+                            }
+                        }
+
+                        Console.WriteLine(phraseGood);
+
+                        if (phraseGood == true)
+                        {
+
                             text += GetString + "\n";
                         }
                     }
@@ -373,7 +411,7 @@ namespace ExcelParser
 
         static void Main(string[] args)
         {
-            string dir = "C:\\Users\\rnicholas\\Documents\\TestVerbatim";
+            string dir = "C:\\Users\\rnicholas\\Documents\\ArabicVerbatims";
 
             Console.OutputEncoding = Encoding.Unicode;
 
