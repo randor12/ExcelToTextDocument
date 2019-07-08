@@ -323,15 +323,13 @@ namespace ExcelParser
 
                         if (phraseGood == true)
                         {
-
+                            writer.WriteLine(GetString);
                             text += GetString + "\n";
                         }
                     }
 
                     
                 }
-
-                writer.WriteLine(text);
                 
                 Console.WriteLine("Lines: \n" + text);
                 
